@@ -1,30 +1,47 @@
 import pandas as pd
+from sklearn.ensemble import ExtraTreesClassifier
+
+df=pd.read_csv('tested.csv')
+
+df=df.drop(['PassengerId', 'Cabin','Name','Ticket'],axis=1)
+
+df['Fare'].fillna(df['Fare'].mean(),inplace=True)
+
 from sklearn.preprocessing import LabelEncoder
-from sklearn.metrics import accuracy_score
-from sklearn.linear_model import LogisticRegression
-from sklearn.model_selection import train_test_split
-import seaborn as sns
-
-data = pd.read_csv('tested.csv')
-logr = LogisticRegression()
-
-data['Age'].fillna(data['Age'].mean(), inplace=True)
-data.drop('Cabin',axis=1)
+le = LabelEncoder()
+le.fit(df['Sex'])
+df['Sex']=le.transform(df['Sex'])
 
 le = LabelEncoder()
-data['Sex'] = le.fit_transform(data['Sex'])
-data['Pclass'] = le.fit_transform(data['Pclass'])
-data['Embarked'] = le.fit_transform(data['Embarked'])
-data.dropna(inplace = True)
+le.fit(df['Embarked'])
+df['Embarked']=le.transform(df['Embarked'])
+df['Age'].fillna(df['Age'].median(),inplace=True)
+df1=df.drop('Survived',axis=1)
+et = ExtraTreesClassifier()
+et.fit(df1,df['Survived'])
 
+feat_imp=pd.Series(et.feature_importances_,index=df1.columns)
+feat_imp.nlargest(7).plot(kind='barh')
+# plt.show()
+df=df.drop(['Age','Embarked','Pclass'],axis=1)
 
-data = pd.concat([data,data['Sex'],data['Embarked']], axis = 1)
+x=df.drop('Survived',axis=1)
+y=df['Survived']
 
-x = data.drop(["PassengerId", 'Name', 'Ticket', 'Cabin', 'Survived','Age','Fare','Parch','SibSp'], axis=1)
-y = data['Survived']
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import accuracy_score
 
-x_train, x_test, y_train, y_test = train_test_split(x, y, random_state=0, test_size=0.3)
+df['SibSp']=pd.cut(df['SibSp'],2,labels=[0,1])
 
-logr.fit(x_train, y_train)
-y_pred = logr.predict(x_test)
-print(accuracy_score(y_test, y_pred))
+mnb=MultinomialNB()
+
+x_train, x_test, y_train, y_test=train_test_split(x, y, random_state=0, train_size=0.3)
+
+mnb.fit(x_train,y_train)
+y_pred=mnb.predict(x_test)
+print("MultinomialNB: ",accuracy_score(y_test,y_pred))
+
+'''
+MultinomialNB:  0.825938566552901
+'''
